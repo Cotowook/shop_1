@@ -1,5 +1,4 @@
 package com.shop.service;
-
 import com.shop.entity.Member;
 import com.shop.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +31,8 @@ public class MemberService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
+// session이 먼저다. 인증 후에 데이터 저장을 위해 사용
+// UserDetails loadUserByUsername 따로 파서
         Member member = memberRepository.findByEmail(email);
 
         if(member == null){
@@ -45,5 +45,4 @@ public class MemberService implements UserDetailsService {
                 .roles(member.getRole().toString())
                 .build();
     }
-
 }
