@@ -42,5 +42,4 @@ public class Member extends BaseEntity{
         member.setRole(Role.ADMIN);
         return member;
     }
-
 }
