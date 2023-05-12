@@ -48,6 +48,7 @@ public class MemberController {
             }
 
             UserDetails userDetails = memberService.loadUserByUsername(member.getEmail());
+
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
