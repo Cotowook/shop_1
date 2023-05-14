@@ -25,9 +25,7 @@ import org.springframework.ui.Model;
 public class MemberController {
     private final MemberService memberService;
     private final PasswordEncoder passwordEncoder;
-
     private final MemberRepository memberRepository;
-
     @PostMapping("/new")
     public ResponseEntity<?> createMember(@RequestBody MemberFormDto memberFormDto) {
         try {
@@ -38,13 +36,14 @@ public class MemberController {
             return ResponseEntity.badRequest().body("회원가입에 실패하였습니다.");
         }
     }
+
     @PostMapping("/login")
     public ResponseEntity<?> loginMember(@RequestBody MemberFormDto memberFormDto) {
         try {
             Member member = memberRepository.findByEmail(memberFormDto.getEmail());
 
-            if (member == null || !member.getPassword().equals(memberFormDto.getPassword())) {
-                throw new Exception("Invalid credentials");
+            if (member == null || !passwordEncoder.matches(memberFormDto.getPassword(), member.getPassword())) {
+                return ResponseEntity.badRequest().body("Invalid credentials");
             }
 
             UserDetails userDetails = memberService.loadUserByUsername(member.getEmail());
@@ -58,10 +57,4 @@ public class MemberController {
             return ResponseEntity.badRequest().body("로그인에 실패하였습니다.");
         }
     }
-    /*
-    @GetMapping("/login")
-    public String getLogin() { return ""; }
-    @GetMapping("/login/error")
-    public String getLoginError() { return "Login error"; }
-    */
 }
