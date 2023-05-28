@@ -15,7 +15,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 @RequiredArgsConstructor
 public class MemberService implements UserDetailsService {
     private final MemberRepository memberRepository;
-
     public Member saveMember(Member member){
         validateDuplicateMember(member);
         return memberRepository.save(member);

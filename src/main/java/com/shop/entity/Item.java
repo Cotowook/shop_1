@@ -57,6 +57,4 @@ public class Item extends BaseEntity{
     public void addStock(int stockNumber){
         this.stockNumber += stockNumber;
     }
-
-}  // 누가 등록했는지 , 누가 샀는지에 대한 연관관계 매핑
-// 세션값에 있는 이메일 값을
+}

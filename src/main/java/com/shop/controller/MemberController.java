@@ -1,55 +1,56 @@
 package com.shop.controller;
 
 import com.shop.dto.MemberFormDto;
-import com.shop.entity.Member;
-import com.shop.repository.MemberRepository;
 import com.shop.service.MemberService;
-import com.shop.config.JwtTokenUtil;
-import com.shop.service.CustomUserDetails;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.shop.entity.Member;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.HttpHeaders;
-@RestController
+import org.springframework.web.bind.annotation.PostMapping;
+
+import org.springframework.validation.BindingResult;
+import javax.validation.Valid;
 @RequestMapping("/members")
+@Controller
 @RequiredArgsConstructor
 public class MemberController {
     private final MemberService memberService;
     private final PasswordEncoder passwordEncoder;
-    private final MemberRepository memberRepository;
-    private final JwtTokenUtil jwtTokenUtil;
 
-    @PostMapping("/new")
-    public ResponseEntity<?> createMember(@RequestBody MemberFormDto memberFormDto) {
+    @GetMapping(value = "/new")
+    public String memberForm(Model model){
+        model.addAttribute("memberFormDto", new MemberFormDto());
+        return "member/memberForm";
+    }
+    @PostMapping(value = "/new")
+    public String newMember(@Valid MemberFormDto memberFormDto, BindingResult bindingResult, Model model){
+        if(bindingResult.hasErrors()){
+            return "member/memberForm";
+        }
         try {
             Member member = Member.createMember(memberFormDto, passwordEncoder);
             memberService.saveMember(member);
-            return ResponseEntity.ok("회원가입이 완료되었습니다.");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("회원가입에 실패하였습니다.");
+        } catch (IllegalStateException e){
+            model.addAttribute("errorMessage", e.getMessage());
+            return "member/memberForm";
         }
+
+        return "redirect:/";
     }
-    @PostMapping("/login")
-    public ResponseEntity<?> loginMember(@RequestBody MemberFormDto memberFormDto) {
-        try {
-            Member member = memberRepository.findByEmail(memberFormDto.getEmail());
 
-            if (member == null || !passwordEncoder.matches(memberFormDto.getPassword(), member.getPassword())) {
-                return ResponseEntity.badRequest().body("Invalid credentials");
-            }
-
-            CustomUserDetails userDetails = CustomUserDetails.build(member);
-            String token = jwtTokenUtil.generateToken(userDetails);
-
-            // 토큰을 HTTP 응답 헤더에 포함하여 전달
-            HttpHeaders headers = new HttpHeaders();
-            headers.add("Authorization", "Bearer " + token);
-
-            return ResponseEntity.ok().headers(headers).body("로그인이 완료되었습니다.");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("로그인에 실패하였습니다.");
-        }
+    @GetMapping(value = "/login")
+    public String loginMember(){
+        return "/member/memberLoginForm";
     }
+
+    @GetMapping(value = "/login/error")
+    public String loginError(Model model){
+        model.addAttribute("loginErrorMsg", "아이디 또는 비밀번호를 확인해주세요");
+        return "/member/memberLoginForm";
+    }
+
 }

@@ -18,9 +18,7 @@ import java.util.Optional;
 @Controller
 @RequiredArgsConstructor
 public class MainController {
-
     private final ItemService itemService;
-
     @GetMapping(value = "/")
     public String main(ItemSearchDto itemSearchDto, Optional<Integer> page, Model model){
 
@@ -33,5 +31,4 @@ public class MainController {
 
         return "main";
     }
-
 }
