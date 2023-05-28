@@ -19,7 +19,6 @@ import org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHand
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private MemberService memberService;
-
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
@@ -30,7 +29,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/").permitAll()
                 .antMatchers("/members/new").permitAll()
                 .antMatchers("/members/login").permitAll()
-                .antMatchers("/api/**").hasRole("USER") // 접근 권한 설정
+                .antMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling().accessDeniedHandler(new OAuth2AccessDeniedHandler()); // 403 오류 핸들링 설정

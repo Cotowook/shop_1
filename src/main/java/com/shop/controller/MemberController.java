@@ -1,24 +1,17 @@
 package com.shop.controller;
+
 import com.shop.dto.MemberFormDto;
 import com.shop.entity.Member;
 import com.shop.repository.MemberRepository;
 import com.shop.service.MemberService;
+import com.shop.config.JwtTokenUtil;
 import com.shop.service.CustomUserDetails;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collection;
-import java.util.Collections;
-
-import javax.validation.Valid;
-import org.springframework.ui.Model;
+import org.springframework.http.HttpHeaders;
 @RestController
 @RequestMapping("/members")
 @RequiredArgsConstructor
@@ -26,6 +19,8 @@ public class MemberController {
     private final MemberService memberService;
     private final PasswordEncoder passwordEncoder;
     private final MemberRepository memberRepository;
+    private final JwtTokenUtil jwtTokenUtil;
+
     @PostMapping("/new")
     public ResponseEntity<?> createMember(@RequestBody MemberFormDto memberFormDto) {
         try {
@@ -36,7 +31,6 @@ public class MemberController {
             return ResponseEntity.badRequest().body("회원가입에 실패하였습니다.");
         }
     }
-
     @PostMapping("/login")
     public ResponseEntity<?> loginMember(@RequestBody MemberFormDto memberFormDto) {
         try {
@@ -46,13 +40,14 @@ public class MemberController {
                 return ResponseEntity.badRequest().body("Invalid credentials");
             }
 
-            UserDetails userDetails = memberService.loadUserByUsername(member.getEmail());
+            CustomUserDetails userDetails = CustomUserDetails.build(member);
+            String token = jwtTokenUtil.generateToken(userDetails);
 
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 토큰을 HTTP 응답 헤더에 포함하여 전달
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Authorization", "Bearer " + token);
 
-            return ResponseEntity.ok("로그인이 완료되었습니다.");
+            return ResponseEntity.ok().headers(headers).body("로그인이 완료되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("로그인에 실패하였습니다.");
         }

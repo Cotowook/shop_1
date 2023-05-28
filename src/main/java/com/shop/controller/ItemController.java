@@ -1,122 +1,81 @@
 package com.shop.controller;
 
 import com.shop.service.ItemService;
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-
-import org.springframework.ui.Model;
 import com.shop.dto.ItemFormDto;
+import com.shop.config.JwtTokenUtil;
+import com.shop.service.MemberService;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import javax.validation.Valid;
+import javax.servlet.http.HttpServletRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.ui.Model;
+import com.shop.service.CustomUserDetails;
+
+import lombok.RequiredArgsConstructor;
+import javax.validation.Valid;
 import java.util.List;
-
-import org.springframework.web.bind.annotation.PathVariable;
-import javax.persistence.EntityNotFoundException;
-
-import com.shop.dto.ItemSearchDto;
-import com.shop.entity.Item;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import java.util.Optional;
-
-@Controller
 @RequiredArgsConstructor
-
 public class ItemController {
     private final ItemService itemService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final MemberService memberService;
 
-    @GetMapping(value = "/admin/item/new")
-    public String itemForm(Model model){
-        model.addAttribute("itemFormDto", new ItemFormDto());
-        return "item/itemForm";
-    }
+    @PostMapping(value = "/item/new")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Object> itemNew(HttpServletRequest request, @Valid ItemFormDto itemFormDto,
+                                          BindingResult bindingResult, Model model,
+                                          @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList) {
 
-    @PostMapping(value = "/admin/item/new")
-    public String itemNew(@Valid ItemFormDto itemFormDto, BindingResult bindingResult,
-                          Model model, @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList){
+        String token = request.getHeader("Authorization");
+        String username = jwtTokenUtil.getUsernameFromToken(token);
+        CustomUserDetails userDetails = (CustomUserDetails) memberService.loadUserByUsername(username);
 
-        if(bindingResult.hasErrors()){
-            return "item/itemForm";
+        if (!jwtTokenUtil.validateToken(token, userDetails)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("유효하지 않은 토큰입니다.");
+        }
+        if (!userDetails.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("관리자 권한이 필요합니다.");
         }
 
-        if(itemImgFileList.get(0).isEmpty() && itemFormDto.getId() == null){
-            model.addAttribute("errorMessage", "첫번째 상품 이미지는 필수 입력 값 입니다.");
-            return "item/itemForm";
+        if (itemImgFileList.get(0).isEmpty() && itemFormDto.getId() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("첫번째 상품 이미지는 필수 입력 값입니다.");
         }
-
         try {
             itemService.saveItem(itemFormDto, itemImgFileList);
-        } catch (Exception e){
-            model.addAttribute("errorMessage", "상품 등록 중 에러가 발생하였습니다.");
-            return "item/itemForm";
+            return ResponseEntity.ok("상품이 성공적으로 등록되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("상품 등록 중 에러가 발생하였습니다.");
         }
-
-        return "redirect:/";
     }
 
-    @GetMapping(value = "/admin/item/{itemId}")
-    public String itemDtl(@PathVariable("itemId") Long itemId, Model model){
-
-        try {
-            ItemFormDto itemFormDto = itemService.getItemDtl(itemId);
-            model.addAttribute("itemFormDto", itemFormDto);
-        } catch(EntityNotFoundException e){
-            model.addAttribute("errorMessage", "존재하지 않는 상품 입니다.");
-            model.addAttribute("itemFormDto", new ItemFormDto());
-            return "item/itemForm";
-        }
-
-        return "item/itemForm";
-    }
-
+    /*
     @PostMapping(value = "/admin/item/{itemId}")
     public String itemUpdate(@Valid ItemFormDto itemFormDto, BindingResult bindingResult,
                              @RequestParam("itemImgFile") List<MultipartFile> itemImgFileList, Model model){
         if(bindingResult.hasErrors()){
             return "item/itemForm";
         }
-
         if(itemImgFileList.get(0).isEmpty() && itemFormDto.getId() == null){
             model.addAttribute("errorMessage", "첫번째 상품 이미지는 필수 입력 값 입니다.");
-            return "item/itemForm";
+            return "localhost:3000/itemForm";
         }
-
         try {
             itemService.updateItem(itemFormDto, itemImgFileList);
         } catch (Exception e){
             model.addAttribute("errorMessage", "상품 수정 중 에러가 발생하였습니다.");
-            return "item/itemForm";
+            return "localhost:3000/itemForm";
         }
-
-        return "redirect:/";
+        return "redirect:localhost:3000";
     }
-
-    @GetMapping(value = {"/admin/items", "/admin/items/{page}"})
-    public String itemManage(ItemSearchDto itemSearchDto, @PathVariable("page") Optional<Integer> page, Model model){
-
-        Pageable pageable = PageRequest.of(page.isPresent() ? page.get() : 0, 3);
-        Page<Item> items = itemService.getAdminItemPage(itemSearchDto, pageable);
-
-        model.addAttribute("items", items);
-        model.addAttribute("itemSearchDto", itemSearchDto);
-        model.addAttribute("maxPage", 5);
-
-        return "item/itemMng";
-    }
-
-    @GetMapping(value = "/item/{itemId}")
-    public String itemDtl(Model model, @PathVariable("itemId") Long itemId){
-        ItemFormDto itemFormDto = itemService.getItemDtl(itemId);
-        model.addAttribute("item", itemFormDto);
-        return "item/itemDtl";
-    }
-
+    */
 }
