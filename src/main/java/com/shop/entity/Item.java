@@ -15,7 +15,6 @@ import com.shop.exception.OutOfStockException;
 @Setter
 @ToString
 public class Item extends BaseEntity{
-
     @Id
     @Column(name="item_id")
     @GeneratedValue(strategy = GenerationType.AUTO)

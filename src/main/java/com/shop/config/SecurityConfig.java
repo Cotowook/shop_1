@@ -17,7 +17,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 public class SecurityConfig {
     @Autowired
     MemberService memberService;
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.formLogin()
@@ -28,25 +27,32 @@ public class SecurityConfig {
                 .and()
                 .logout()
                 .logoutRequestMatcher(new AntPathRequestMatcher("/members/logout"))
-                .logoutSuccessUrl("/")
-        ;
+                .logoutSuccessUrl("/");
 
         http.cors().and().csrf()
-                .ignoringAntMatchers("/api/members/new", "/api/members/login", "/api/items", "/api/items/{id}");
+                .ignoringAntMatchers("/api/members/new", "/api/members/login",
+                        "/api/items", "/api/items/{id}",
+                        "/api/image", "/api/image/{itemId}/{imageId}",
+                        "/api/search", "api/search/{itemName}",
+                        "/api/community/posts", "/api/community/posts/{id}"
+                        );
 
         http.authorizeRequests()
+                .antMatchers("/images/**").permitAll()
                 .antMatchers("/api/members/new", "/api/members/login").permitAll()
                 .antMatchers("/api/items", "/api/items/{id}").permitAll()
+                .antMatchers("/api/image", "/api/image/{itemId}/{imageId}").permitAll()
+                .antMatchers("/api/search", "/api/search/{itemName}").permitAll()
+                .antMatchers("/api/community/posts", "/api/community/posts/{id}").permitAll()
+
                 .mvcMatchers("/css/**", "/js/**", "/img/**").permitAll()
-                .mvcMatchers("/", "/members/**", "/item/**", "/images/**").permitAll()
+                .mvcMatchers("/","/members/**","/item/**","/items/**","/image/**","/images/**").permitAll()
                 .mvcMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
         ;
-
         http.exceptionHandling()
                 .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
         ;
-
         return http.build();
     }
 
@@ -54,6 +60,5 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 }
 
